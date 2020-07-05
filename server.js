@@ -16,7 +16,6 @@ app.use(bodyParser.json());
 const server = http.createServer(app);
 const router = express.Router();
 
-
 // Funções chamadas nas rotas
 
 const getFirstPlayer = () => (Math.random() >= 0.5 ? 'X' : 'O');
@@ -84,7 +83,7 @@ router.post('/game', (req, res) => {
 // Realizando movimentos
 
 router.post('/game/:id/movement', (req, res) => {
-  // const { id } = req.params; 
+  // const { id } = req.params;
   const { player, position, id } = req.body;
 
   if (!games[id]) {
