@@ -2,6 +2,7 @@
 
 ## Para executar a aplicação:
 
+    // A porta utilizada é a localhost:3000
     $ npm install
     $ npm start
 
@@ -10,7 +11,7 @@
     // A aplicação deverá estar em execução:
     $ npm start
 
-    // Em outro terminal executa os testes:
+    // Execute os testes em outro terminal:
     $ npm test
 
 
