@@ -99,11 +99,6 @@ async function makeMovement(id, player, position) {
   return movementResponse;
 }
 
-// testingSuccessCases(movementsForTest.secondPlayerWins);
-// testingSuccessCases(movementsForTest.draw);
-// testingFailFirstPlayerWrong(movementsForTest.firstPlayerWins);
-// testingSuccessCases(movementsForTest.firstPlayerWins)).toHaveBeenCalled()
-
 describe('Testando os casos de Sucesso', () => {
   test('Criar novo Jogo', async () => {
     const game = await createGame();
