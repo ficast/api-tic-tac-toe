@@ -5,6 +5,8 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const { v4: generateId } = require('uuid');
 
+// Inicializando o servidor e definindo a porta
+
 const app = express();
 const port = 3000;
 app.set('port', port);
@@ -13,6 +15,9 @@ app.use(bodyParser.json());
 
 const server = http.createServer(app);
 const router = express.Router();
+
+
+// Funções chamadas nas rotas
 
 const getFirstPlayer = () => (Math.random() >= 0.5 ? 'X' : 'O');
 
@@ -60,9 +65,11 @@ const createNewGame = (player) => {
   };
 };
 
+// Armazenamento das partidas
+
 let games = {};
 
-// Starting New Game
+// Iniciando nova partida
 
 router.post('/game', (req, res) => {
   const gameId = generateId();
@@ -74,10 +81,10 @@ router.post('/game', (req, res) => {
   });
 });
 
-// Making movements
+// Realizando movimentos
 
 router.post('/game/:id/movement', (req, res) => {
-  // const { id } = req.params;
+  // const { id } = req.params; 
   const { player, position, id } = req.body;
 
   if (!games[id]) {
