@@ -14,7 +14,7 @@
 
     $ ./Run.sh
 
-### Para executar a aplicação manualmente:
+#### Para executar a aplicação manualmente:
 
     $ npm install
     $ npm start
@@ -26,7 +26,7 @@
 
     $ ./Test.sh
     
-### Para executar os testes manualmente:
+#### Para executar os testes manualmente:
 
     // A aplicação deverá estar em execução:
     $ npm start
