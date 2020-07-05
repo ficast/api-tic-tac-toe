@@ -16,11 +16,11 @@ const movementsForTest = {
   secondPlayerWins: [
     { x: 0, y: 2 },
     { x: 0, y: 0 },
-    { x: 1, y: 1 },
     { x: 2, y: 0 },
+    { x: 1, y: 1 },
     { x: 0, y: 1 },
-    { x: 1, y: 0 },
     { x: 2, y: 2 },
+    { x: 1, y: 0 },
     { x: 2, y: 1 },
     { x: 1, y: 2 },
   ],
@@ -112,17 +112,23 @@ describe('Testando os casos de Sucesso', () => {
     const gameResult = await testingSuccessCases(movementsForTest.firstPlayerWins);
     expect(gameResult.msg).toBe('Partida finalizada');
     expect(gameResult.winner).toBeDefined();
+    expect(gameResult.winner == 'X' || gameResult.winner == 'O').toBeTruthy();
+    expect(gameResult.winner).not.toBe('Draw');
   });
 
   test('Segundo jogador ganha', async () => {
-    const gameResult = await testingSuccessCases(movementsForTest.firstPlayerWins);
+    const gameResult = await testingSuccessCases(movementsForTest.secondPlayerWins);
     expect(gameResult.msg).toBe('Partida finalizada');
     expect(gameResult.winner).toBeDefined();
+    expect(gameResult.winner == 'X' || gameResult.winner == 'O').toBeTruthy();
+    expect(gameResult.winner).not.toBe('Draw');
   });
 
   test('Jogo termina empatado', async () => {
     const gameResult = await testingSuccessCases(movementsForTest.draw);
     expect(gameResult.msg).toBe('Partida finalizada');
+    expect(gameResult.winner).toBeDefined();
+    expect(gameResult.winner == 'X' || gameResult.winner == 'O').toBeFalsy();
     expect(gameResult.winner).toBe('Draw');
   });
 
@@ -139,7 +145,7 @@ describe('Testando os casos de Sucesso', () => {
     expect(gameThreeResult.winner).toBeDefined();
   });
 
-  test('Jogar 100 partidas simultaneamente', async () => {
+  test('Jogar 100 partidas simultaneamente com movimentos aleatórios', async () => {
     let games = [];
     let counterReq = 0;
     while (counterReq < 100) {
