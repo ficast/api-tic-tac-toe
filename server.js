@@ -157,3 +157,4 @@ router.post('/game/:id/movement', (req, res) => {
 
 app.use('/', router);
 server.listen(port);
+console.log('API Inicializada');
