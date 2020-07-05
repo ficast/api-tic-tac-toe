@@ -158,6 +158,16 @@ describe('Testando os casos de Sucesso', () => {
     while (counterTest < 100) {
       expect(games[counterTest].msg).toBe('Partida finalizada');
       expect(games[counterTest].winner).toBeDefined();
+      expect(
+        games[counterTest].winner == 'X' ||
+          games[counterTest].winner == 'O' ||
+          games[counterTest].winner == 'Draw',
+      ).toBeTruthy();
+      expect(
+        games[counterTest].winner == 'x' ||
+          games[counterTest].winner == 'o' ||
+          games[counterTest].winner == 'draw',
+      ).toBeFalsy();
       counterTest++;
     }
   });
