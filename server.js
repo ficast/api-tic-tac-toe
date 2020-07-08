@@ -29,14 +29,14 @@ const conditionsToWin = (moves) => {
 
   const conditionForColumn = moves.reduce(
     (acc, { x }) => {
-      acc[Number(x)] = acc[Number(x)] + 1;
+      acc[x] = acc[x] + 1;
       return acc;
     },
     [0, 0, 0],
   );
   const conditionForLine = moves.reduce(
     (acc, { y }) => {
-      acc[Number(y)] = acc[Number(y)] + 1;
+      acc[y] = acc[y] + 1;
       return acc;
     },
     [0, 0, 0],
