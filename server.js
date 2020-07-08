@@ -43,7 +43,7 @@ const conditionsToWin = (moves) => {
   );
 
   if (conditionForDiagonalUp.length == 3 || conditionForDiagonalDown.length == 3) return true;
-  if (conditionForLine.indexOf(3) > 0 || conditionForColumn.indexOf(3) > 0) return true;
+  if (conditionForLine.indexOf(3) >= 0 || conditionForColumn.indexOf(3) >= 0) return true;
   return false;
 };
 
