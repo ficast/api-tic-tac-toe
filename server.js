@@ -4,7 +4,6 @@ const http = require('http');
 const bodyParser = require('body-parser');
 const express = require('express');
 const { v4: generateId } = require('uuid');
-const _ = require('lodash');
 
 // Inicializando o servidor e definindo a porta
 
@@ -85,7 +84,7 @@ router.post('/game', (req, res) => {
   const gameId = generateId();
   const currentPlayer = getFirstPlayer();
   games = { ...games, [gameId]: createNewGame(currentPlayer) };
-  res.status(200).send({
+  return res.status(200).send({
     id: gameId,
     firstPlayer: currentPlayer,
   });
@@ -98,44 +97,39 @@ router.post('/game/:id/movement', (req, res) => {
   const { player, position, id } = req.body;
 
   if (!games[id]) {
-    res.status(400).send({
+    return res.status(400).send({
       msg: `Partida ${id} não encontrada`,
     });
-    return null;
   }
 
   let { currentPlayer, round, positionsPlayed, gameIsOver = false } = games[id];
 
   if (gameIsOver) {
-    res.status(400).send({
+    return res.status(400).send({
       msg: 'Partida finalizada',
       winner: games[id].winner,
     });
-    return null;
   }
 
   if (player != currentPlayer) {
-    res.status(400).send({
+    return res.status(400).send({
       msg: 'Não é o turno do jogador',
     });
-    return null;
   }
 
   const { x, y } = position;
   if (x > 2 || y > 2 || x < 0 || y < 0) {
-    res.status(400).send({
+    return res.status(400).send({
       msg: 'Jogada inválida: posição inexistente',
     });
-    return null;
   }
 
   const repeatedPosition = isRepeatedPosition(positionsPlayed, position);
 
   if (round != 1 && repeatedPosition) {
-    res.status(400).send({
+    return res.status(400).send({
       msg: 'Jogada inválida: já realizada anteriormente',
     });
-    return null;
   }
 
   positionsPlayed[player] = [...positionsPlayed[player], position];
@@ -149,11 +143,10 @@ router.post('/game/:id/movement', (req, res) => {
         gameIsOver: true,
         winner: isThereAnyWinner ? isThereAnyWinner : 'Draw',
       };
-      res.status(200).send({
+      return res.status(200).send({
         msg: 'Partida finalizada',
         winner: games[id].winner,
       });
-      return null;
     }
   }
 
