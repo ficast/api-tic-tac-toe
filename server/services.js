@@ -46,7 +46,6 @@ const isRepeatedPosition = (positionsPlayed, newPosition) => {
 module.exports = {
   getFirstPlayer,
   changeCurrentPlayer,
-  conditionsToWin,
   getWinner,
   isRepeatedPosition
 }
