@@ -41,10 +41,37 @@
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
     main { width: 100%; max-width: 360px; text-align: center; }
-    h1 { font-size: 1.6rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+    h1 { font-size: 1.6rem; margin: 0 0 14px; letter-spacing: -0.02em; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .segmented {
+      display: inline-flex;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+    }
+    .segmented button {
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font: 500 .88rem system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .segmented button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+    .segmented[hidden] { display: none; }
+
     .status {
       min-height: 1.6em;
-      margin: 0 0 20px;
+      margin: 0 0 16px;
       color: var(--muted);
       font-size: 1.05rem;
     }
@@ -102,13 +129,26 @@
 <body>
   <main>
     <h1>Jogo da Velha</h1>
+
+    <div class="controls">
+      <div class="segmented" role="group" aria-label="Modo de jogo" id="mode">
+        <button type="button" data-value="bot" aria-pressed="true">Contra o bot</button>
+        <button type="button" data-value="pvp" aria-pressed="false">2 jogadores</button>
+      </div>
+      <div class="segmented" role="group" aria-label="Dificuldade" id="difficulty">
+        <button type="button" data-value="facil" aria-pressed="false">Fácil</button>
+        <button type="button" data-value="medio" aria-pressed="true">Médio</button>
+        <button type="button" data-value="dificil" aria-pressed="false">Difícil</button>
+      </div>
+    </div>
+
     <p class="status" id="status" aria-live="polite">Carregando…</p>
     <div class="board" id="board" role="grid" aria-label="Tabuleiro"></div>
     <p class="error" id="error" role="alert"></p>
     <button class="new" id="new-game" type="button">Nova partida</button>
     <div class="score" aria-label="Placar">
-      <span>X <b id="score-X">0</b></span>
-      <span>O <b id="score-O">0</b></span>
+      <span><span id="label-X">Você</span> <b id="score-X">0</b></span>
+      <span><span id="label-O">Bot</span> <b id="score-O">0</b></span>
       <span>Empates <b id="score-Draw">0</b></span>
     </div>
   </main>
@@ -119,14 +159,21 @@
       [0, 3, 6], [1, 4, 7], [2, 5, 8],
       [0, 4, 8], [2, 4, 6],
     ];
+    const BOT_DELAY_MS = 350;
 
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
     const errorEl = document.getElementById('error');
-    const score = { X: 0, O: 0, Draw: 0 };
+    const modeEl = document.getElementById('mode');
+    const difficultyEl = document.getElementById('difficulty');
 
-    let game = null; // { id, currentPlayer, cells: Array(9), over }
+    const settings = { mode: 'bot', difficulty: 'medio' };
+    let score = { X: 0, O: 0, Draw: 0 };
+    let game = null; // { id, currentPlayer, cells, over, winningLine, vsBot }
     let busy = false;
+
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const toIndex = ({ x, y }) => y * 3 + x;
 
     const cells = Array.from({ length: 9 }, (_, i) => {
       const btn = document.createElement('button');
@@ -138,8 +185,8 @@
       return btn;
     });
 
-    function setStatus(html) { statusEl.innerHTML = html; }
     function playerTag(p) { return `<strong class="${p}">${p}</strong>`; }
+    function setStatus(html) { statusEl.innerHTML = html; }
 
     function render() {
       cells.forEach((btn, i) => {
@@ -149,6 +196,36 @@
         btn.classList.toggle('win', !!game?.winningLine?.includes(i));
         btn.disabled = !game || game.over || !!value || busy;
       });
+    }
+
+    function renderScore() {
+      const vsBot = settings.mode === 'bot';
+      document.getElementById('label-X').textContent = vsBot ? 'Você' : 'X';
+      document.getElementById('label-O').textContent = vsBot ? 'Bot' : 'O';
+      for (const key of Object.keys(score)) {
+        document.getElementById(`score-${key}`).textContent = score[key];
+      }
+    }
+
+    function turnStatus() {
+      if (game.vsBot) {
+        setStatus(game.currentPlayer === 'X' ? `Sua vez (${playerTag('X')})` : 'Bot pensando…');
+      } else {
+        setStatus(`Vez de ${playerTag(game.currentPlayer)}`);
+      }
+    }
+
+    function finish(winner) {
+      game.over = true;
+      score[winner]++;
+      renderScore();
+      if (winner === 'Draw') {
+        setStatus('Deu velha! Empate.');
+        return;
+      }
+      game.winningLine = LINES.find((line) => line.every((c) => game.cells[c] === winner));
+      if (game.vsBot) setStatus(winner === 'X' ? 'Você venceu! 🎉' : `O bot (${playerTag('O')}) venceu.`);
+      else setStatus(`${playerTag(winner)} venceu!`);
     }
 
     async function api({ url, body }) {
@@ -162,17 +239,35 @@
       return data;
     }
 
+    // Mostra a jogada do bot com um pequeno atraso, para dar tempo de ver a própria jogada.
+    async function showBotMove(data) {
+      if (!data.botMove) return;
+      game.currentPlayer = 'O';
+      turnStatus();
+      render();
+      await wait(BOT_DELAY_MS);
+      game.cells[toIndex(data.botMove)] = 'O';
+    }
+
     async function newGame() {
       errorEl.textContent = '';
+      busy = true;
+      const vsBot = settings.mode === 'bot';
       try {
-        const data = await api({ url: '/game' });
-        game = { id: data.id, currentPlayer: data.firstPlayer, cells: Array(9).fill(null), over: false };
-        setStatus(`Vez de ${playerTag(game.currentPlayer)}`);
+        const data = await api({
+          url: '/game',
+          body: vsBot ? { mode: 'bot', difficulty: settings.difficulty } : undefined,
+        });
+        game = { id: data.id, currentPlayer: data.firstPlayer, cells: Array(9).fill(null), over: false, vsBot };
+        await showBotMove(data);
+        if (data.nextPlayer) game.currentPlayer = data.nextPlayer;
+        turnStatus();
       } catch (err) {
         game = null;
         setStatus('Não foi possível iniciar a partida');
         errorEl.textContent = err.message;
       }
+      busy = false;
       render();
     }
 
@@ -191,20 +286,13 @@
           body: { id: game.id, player, position },
         });
         game.cells[i] = player;
+        await showBotMove(data);
 
         if (data.winner) {
-          game.over = true;
-          score[data.winner]++;
-          document.getElementById(`score-${data.winner}`).textContent = score[data.winner];
-          if (data.winner === 'Draw') {
-            setStatus('Deu velha! Empate.');
-          } else {
-            setStatus(`${playerTag(data.winner)} venceu!`);
-            game.winningLine = LINES.find((line) => line.every((c) => game.cells[c] === data.winner));
-          }
+          finish(data.winner);
         } else {
           game.currentPlayer = data.nextPlayer;
-          setStatus(`Vez de ${playerTag(game.currentPlayer)}`);
+          turnStatus();
         }
       } catch (err) {
         errorEl.textContent = err.message;
@@ -214,8 +302,26 @@
       }
     }
 
+    function setupSegmented(el, key, onChange) {
+      el.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-value]');
+        if (!btn || btn.dataset.value === settings[key]) return;
+        settings[key] = btn.dataset.value;
+        el.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+        onChange();
+      });
+    }
+
+    setupSegmented(modeEl, 'mode', () => {
+      difficultyEl.hidden = settings.mode !== 'bot';
+      score = { X: 0, O: 0, Draw: 0 };
+      renderScore();
+      newGame();
+    });
+    setupSegmented(difficultyEl, 'difficulty', newGame);
     document.getElementById('new-game').addEventListener('click', newGame);
 
+    renderScore();
     newGame();
   </script>
 </body>
