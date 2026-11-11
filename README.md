@@ -19,6 +19,9 @@
     $ npm install
     $ npm start
 
+    // Para jogar pelo navegador, acesse http://localhost:3000
+    // (a porta pode ser alterada com a variável de ambiente PORT)
+
 ## Para executar os testes:
 
     // Certifique-se de que a aplicação esteja sendo executada.

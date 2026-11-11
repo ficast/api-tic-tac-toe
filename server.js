@@ -1,6 +1,7 @@
 'use strict';
 
 const http = require('http');
+const path = require('path');
 const { randomUUID: generateId } = require('crypto');
 const express = require('express');
 const services = require('./server/services');
@@ -10,10 +11,11 @@ const { makeMovement, games } = require('./server/makeMovement');
 // Inicializando o servidor e definindo a porta
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT) || 3000;
 app.set('port', port);
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
 const router = express.Router();
@@ -43,4 +45,4 @@ router.post('/game/:id/movement', makeMovement);
 
 app.use('/', router);
 server.listen(port);
-console.log('API Inicializada');
+console.log(`API Inicializada em http://localhost:${port}`);
