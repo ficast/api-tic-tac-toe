@@ -19,6 +19,22 @@
     $ npm install
     $ npm start
 
+    // Para jogar pelo navegador, acesse http://localhost:3000
+    // (a porta pode ser alterada com a variável de ambiente PORT)
+
+## Jogando contra o bot
+
+Envie `mode: "bot"` ao criar a partida. O usuário joga sempre com `X` e o bot com `O`;
+quem começa continua sendo sorteado. A dificuldade pode ser `facil`, `medio` ou `dificil`
+(padrão; no difícil o bot nunca perde).
+
+    POST /game
+    { "mode": "bot", "difficulty": "medio" }
+
+Se o bot começar, a resposta já traz a jogada dele em `botMove`. Depois disso, cada
+`POST /game/:id/movement` do usuário retorna também a resposta do bot (`botMove`), além de
+`nextPlayer` ou `winner`.
+
 ## Para executar os testes:
 
     // Certifique-se de que a aplicação esteja sendo executada.
@@ -42,9 +58,6 @@
 * [Node.js HTTP Module](https://nodejs.org/api/http.html)
 * [Express](https://expressjs.com/pt-br/)
 
-* [node-fetch](https://www.npmjs.com/package/node-fetch)
-* [body-parser](https://www.npmjs.com/package/body-parser)
-* [huid](https://www.npmjs.com/package/uuid)
-
-* [Lodash](https://lodash.com/)
 * [Jest](https://jestjs.io/)
+
+Requer Node.js 18 ou superior (usa `fetch` e `crypto.randomUUID` nativos).

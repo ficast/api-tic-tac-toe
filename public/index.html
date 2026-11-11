@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jogo da Velha</title>
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --surface: #ffffff;
+      --text: #1f1d1a;
+      --muted: #77716a;
+      --line: #e3ded5;
+      --x: #d9480f;
+      --o: #1971c2;
+      --win: #fff3bf;
+      --error: #c92a2a;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161514;
+        --surface: #22201e;
+        --text: #f1ede6;
+        --muted: #9a938a;
+        --line: #35322e;
+        --x: #ff8a4c;
+        --o: #5ea8ff;
+        --win: #3d3410;
+        --error: #ff6b6b;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { width: 100%; max-width: 360px; text-align: center; }
+    h1 { font-size: 1.6rem; margin: 0 0 14px; letter-spacing: -0.02em; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .segmented {
+      display: inline-flex;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+    }
+    .segmented button {
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font: 500 .88rem system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .segmented button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+    .segmented[hidden] { display: none; }
+
+    .status {
+      min-height: 1.6em;
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+    .status strong.X { color: var(--x); }
+    .status strong.O { color: var(--o); }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 8px;
+      aspect-ratio: 1;
+    }
+    .cell {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      font: 700 clamp(2.4rem, 14vw, 3.6rem)/1 system-ui, sans-serif;
+      color: var(--text);
+      cursor: pointer;
+      transition: transform .08s ease, background .2s ease;
+    }
+    .cell:hover:not(:disabled) { transform: scale(1.03); }
+    .cell:disabled { cursor: default; }
+    .cell.X { color: var(--x); }
+    .cell.O { color: var(--o); }
+    .cell.win { background: var(--win); }
+    .cell:focus-visible { outline: 3px solid var(--o); outline-offset: 2px; }
+    .error {
+      min-height: 1.4em;
+      margin: 14px 0 0;
+      color: var(--error);
+      font-size: .92rem;
+    }
+    button.new {
+      margin-top: 14px;
+      padding: 10px 22px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--text);
+      color: var(--bg);
+      font: 600 1rem system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .score {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    .score b { color: var(--text); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Jogo da Velha</h1>
+
+    <div class="controls">
+      <div class="segmented" role="group" aria-label="Modo de jogo" id="mode">
+        <button type="button" data-value="bot" aria-pressed="true">Contra o bot</button>
+        <button type="button" data-value="pvp" aria-pressed="false">2 jogadores</button>
+      </div>
+      <div class="segmented" role="group" aria-label="Dificuldade" id="difficulty">
+        <button type="button" data-value="facil" aria-pressed="false">Fácil</button>
+        <button type="button" data-value="medio" aria-pressed="true">Médio</button>
+        <button type="button" data-value="dificil" aria-pressed="false">Difícil</button>
+      </div>
+    </div>
+
+    <p class="status" id="status" aria-live="polite">Carregando…</p>
+    <div class="board" id="board" role="grid" aria-label="Tabuleiro"></div>
+    <p class="error" id="error" role="alert"></p>
+    <button class="new" id="new-game" type="button">Nova partida</button>
+    <div class="score" aria-label="Placar">
+      <span><span id="label-X">Você</span> <b id="score-X">0</b></span>
+      <span><span id="label-O">Bot</span> <b id="score-O">0</b></span>
+      <span>Empates <b id="score-Draw">0</b></span>
+    </div>
+  </main>
+
+  <script>
+    const LINES = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6],
+    ];
+    const BOT_DELAY_MS = 350;
+
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+    const modeEl = document.getElementById('mode');
+    const difficultyEl = document.getElementById('difficulty');
+
+    const settings = { mode: 'bot', difficulty: 'medio' };
+    let score = { X: 0, O: 0, Draw: 0 };
+    let game = null; // { id, currentPlayer, cells, over, winningLine, vsBot }
+    let busy = false;
+
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const toIndex = ({ x, y }) => y * 3 + x;
+
+    const cells = Array.from({ length: 9 }, (_, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', `Casa ${i + 1}`);
+      btn.addEventListener('click', () => play(i));
+      boardEl.appendChild(btn);
+      return btn;
+    });
+
+    function playerTag(p) { return `<strong class="${p}">${p}</strong>`; }
+    function setStatus(html) { statusEl.innerHTML = html; }
+
+    function render() {
+      cells.forEach((btn, i) => {
+        const value = game?.cells[i] || '';
+        btn.textContent = value;
+        btn.className = `cell ${value}`;
+        btn.classList.toggle('win', !!game?.winningLine?.includes(i));
+        btn.disabled = !game || game.over || !!value || busy;
+      });
+    }
+
+    function renderScore() {
+      const vsBot = settings.mode === 'bot';
+      document.getElementById('label-X').textContent = vsBot ? 'Você' : 'X';
+      document.getElementById('label-O').textContent = vsBot ? 'Bot' : 'O';
+      for (const key of Object.keys(score)) {
+        document.getElementById(`score-${key}`).textContent = score[key];
+      }
+    }
+
+    function turnStatus() {
+      if (game.vsBot) {
+        setStatus(game.currentPlayer === 'X' ? `Sua vez (${playerTag('X')})` : 'Bot pensando…');
+      } else {
+        setStatus(`Vez de ${playerTag(game.currentPlayer)}`);
+      }
+    }
+
+    function finish(winner) {
+      game.over = true;
+      score[winner]++;
+      renderScore();
+      if (winner === 'Draw') {
+        setStatus('Deu velha! Empate.');
+        return;
+      }
+      game.winningLine = LINES.find((line) => line.every((c) => game.cells[c] === winner));
+      if (game.vsBot) setStatus(winner === 'X' ? 'Você venceu! 🎉' : `O bot (${playerTag('O')}) venceu.`);
+      else setStatus(`${playerTag(winner)} venceu!`);
+    }
+
+    async function api({ url, body }) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || 'Erro inesperado');
+      return data;
+    }
+
+    // Mostra a jogada do bot com um pequeno atraso, para dar tempo de ver a própria jogada.
+    async function showBotMove(data) {
+      if (!data.botMove) return;
+      game.currentPlayer = 'O';
+      turnStatus();
+      render();
+      await wait(BOT_DELAY_MS);
+      game.cells[toIndex(data.botMove)] = 'O';
+    }
+
+    async function newGame() {
+      errorEl.textContent = '';
+      busy = true;
+      const vsBot = settings.mode === 'bot';
+      try {
+        const data = await api({
+          url: '/game',
+          body: vsBot ? { mode: 'bot', difficulty: settings.difficulty } : undefined,
+        });
+        game = { id: data.id, currentPlayer: data.firstPlayer, cells: Array(9).fill(null), over: false, vsBot };
+        await showBotMove(data);
+        if (data.nextPlayer) game.currentPlayer = data.nextPlayer;
+        turnStatus();
+      } catch (err) {
+        game = null;
+        setStatus('Não foi possível iniciar a partida');
+        errorEl.textContent = err.message;
+      }
+      busy = false;
+      render();
+    }
+
+    async function play(i) {
+      if (!game || game.over || game.cells[i] || busy) return;
+      busy = true;
+      errorEl.textContent = '';
+      render();
+
+      const player = game.currentPlayer;
+      const position = { x: i % 3, y: Math.floor(i / 3) };
+
+      try {
+        const data = await api({
+          url: `/game/${game.id}/movement`,
+          body: { id: game.id, player, position },
+        });
+        game.cells[i] = player;
+        await showBotMove(data);
+
+        if (data.winner) {
+          finish(data.winner);
+        } else {
+          game.currentPlayer = data.nextPlayer;
+          turnStatus();
+        }
+      } catch (err) {
+        errorEl.textContent = err.message;
+      } finally {
+        busy = false;
+        render();
+      }
+    }
+
+    function setupSegmented(el, key, onChange) {
+      el.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-value]');
+        if (!btn || btn.dataset.value === settings[key]) return;
+        settings[key] = btn.dataset.value;
+        el.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+        onChange();
+      });
+    }
+
+    setupSegmented(modeEl, 'mode', () => {
+      difficultyEl.hidden = settings.mode !== 'bot';
+      score = { X: 0, O: 0, Draw: 0 };
+      renderScore();
+      newGame();
+    });
+    setupSegmented(difficultyEl, 'difficulty', newGame);
+    document.getElementById('new-game').addEventListener('click', newGame);
+
+    renderScore();
+    newGame();
+  </script>
+</body>
+</html>

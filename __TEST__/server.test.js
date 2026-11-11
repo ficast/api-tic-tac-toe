@@ -1,5 +1,13 @@
-const fetch = require('node-fetch');
-const _ = require('lodash');
+const API_URL = process.env.API_URL || 'http://localhost:3000';
+
+const shuffle = (array) => {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
 
 const movementsForTest = {
   firstPlayerWins: [
@@ -38,7 +46,7 @@ const movementsForTest = {
 };
 
 async function createGame() {
-  const startNewGame = await fetch('http://localhost:3000/game', {
+  const startNewGame = await fetch(`${API_URL}/game`, {
     method: 'POST',
   });
   const game = await startNewGame.json();
@@ -53,7 +61,7 @@ async function testingSuccessCases(arrayOfMovements) {
   let { id, nextPlayer } = await createGame();
   let movementResponse;
 
-  for (move of arrayOfMovements) {
+  for (const move of arrayOfMovements) {
     movementResponse = await makeMovement(id, nextPlayer, move);
     nextPlayer = movementResponse.nextPlayer;
   }
@@ -73,7 +81,7 @@ async function testingPlayAfterWinner(arrayOfMovements) {
   let { id, nextPlayer } = await createGame();
   let movementResponse;
 
-  for (move of arrayOfMovements) {
+  for (const move of arrayOfMovements) {
     movementResponse = await makeMovement(id, nextPlayer, move);
     nextPlayer = movementResponse.nextPlayer;
   }
@@ -85,7 +93,7 @@ async function testingPlayAfterWinner(arrayOfMovements) {
 
 async function makeMovement(id, player, position) {
   // console.log('MakeMovement ->> entrou');
-  const makeCurrentMovement = await fetch(`http://localhost:3000/game/${id}/movement`, {
+  const makeCurrentMovement = await fetch(`${API_URL}/game/${id}/movement`, {
     method: 'POST',
     body: JSON.stringify({
       id,
@@ -149,7 +157,7 @@ describe('Testando os casos de Sucesso', () => {
     let games = [];
     let counterReq = 0;
     while (counterReq < 100) {
-      sequenceOfMovements = _.shuffle(movementsForTest.firstPlayerWins);
+      const sequenceOfMovements = shuffle(movementsForTest.firstPlayerWins);
       games[counterReq] = await testingSuccessCases(sequenceOfMovements);
       counterReq++;
     }
@@ -170,7 +178,7 @@ describe('Testando os casos de Sucesso', () => {
       ).toBeFalsy();
       counterTest++;
     }
-  });
+  }, 30000);
 });
 
 describe('Testando os casos de Falha', () => {
@@ -206,5 +214,57 @@ describe('Testando os casos de Falha', () => {
     const response = await makeMovement(id, nextPlayer, { x: 0, y: 0 });
     const gameErro = await makeMovement(id, response.nextPlayer, { x: 0, y: 0 });
     expect(gameErro.msg).toBe('Jogada inválida: já realizada anteriormente');
+  });
+});
+
+describe('Testando o modo contra o bot', () => {
+  async function createBotGame(body) {
+    const response = await fetch(`${API_URL}/game`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return { status: response.status, data: await response.json() };
+  }
+
+  const ALL_POSITIONS = [0, 1, 2].flatMap((y) => [0, 1, 2].map((x) => ({ x, y })));
+  const samePosition = (a) => (b) => a.x === b.x && a.y === b.y;
+
+  test('Partida contra o bot vai até o fim', async () => {
+    const { data: game } = await createBotGame({ mode: 'bot', difficulty: 'dificil' });
+    expect(game.player).toBe('X');
+
+    const taken = [];
+    if (game.botMove) {
+      expect(game.firstPlayer).toBe('O');
+      expect(game.nextPlayer).toBe('X');
+      taken.push(game.botMove);
+    }
+
+    let response;
+    do {
+      const move = ALL_POSITIONS.find((p) => !taken.some(samePosition(p)));
+      response = await makeMovement(game.id, 'X', move);
+      taken.push(move);
+      if (response.botMove) {
+        expect(taken.some(samePosition(response.botMove))).toBeFalsy();
+        taken.push(response.botMove);
+      }
+    } while (!response.winner);
+
+    expect(response.msg).toBe('Partida finalizada');
+    expect(['O', 'Draw']).toContain(response.winner);
+  });
+
+  test('Usuário não pode jogar no lugar do bot', async () => {
+    const { data: game } = await createBotGame({ mode: 'bot' });
+    const gameErro = await makeMovement(game.id, 'O', { x: 0, y: 0 });
+    expect(gameErro.msg).toBe('Não é o turno do jogador');
+  });
+
+  test('Dificuldade inválida', async () => {
+    const { status, data } = await createBotGame({ mode: 'bot', difficulty: 'impossivel' });
+    expect(status).toBe(400);
+    expect(data.msg).toBe('Dificuldade inválida: impossivel');
   });
 });
