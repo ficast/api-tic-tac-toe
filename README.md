@@ -42,9 +42,6 @@
 * [Node.js HTTP Module](https://nodejs.org/api/http.html)
 * [Express](https://expressjs.com/pt-br/)
 
-* [node-fetch](https://www.npmjs.com/package/node-fetch)
-* [body-parser](https://www.npmjs.com/package/body-parser)
-* [huid](https://www.npmjs.com/package/uuid)
-
-* [Lodash](https://lodash.com/)
 * [Jest](https://jestjs.io/)
+
+Requer Node.js 18 ou superior (usa `fetch` e `crypto.randomUUID` nativos).

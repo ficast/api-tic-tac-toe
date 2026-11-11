@@ -1,9 +1,8 @@
 'use strict';
 
 const http = require('http');
-const bodyParser = require('body-parser');
+const { randomUUID: generateId } = require('crypto');
 const express = require('express');
-const { v4: generateId } = require('uuid');
 const services = require('./server/services');
 const { getFirstPlayer } = services;
 const { makeMovement, games } = require('./server/makeMovement');
@@ -14,7 +13,7 @@ const app = express();
 const port = 3000;
 app.set('port', port);
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 const server = http.createServer(app);
 const router = express.Router();

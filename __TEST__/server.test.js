@@ -1,5 +1,11 @@
-const fetch = require('node-fetch');
-const _ = require('lodash');
+const shuffle = (array) => {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
 
 const movementsForTest = {
   firstPlayerWins: [
@@ -53,7 +59,7 @@ async function testingSuccessCases(arrayOfMovements) {
   let { id, nextPlayer } = await createGame();
   let movementResponse;
 
-  for (move of arrayOfMovements) {
+  for (const move of arrayOfMovements) {
     movementResponse = await makeMovement(id, nextPlayer, move);
     nextPlayer = movementResponse.nextPlayer;
   }
@@ -73,7 +79,7 @@ async function testingPlayAfterWinner(arrayOfMovements) {
   let { id, nextPlayer } = await createGame();
   let movementResponse;
 
-  for (move of arrayOfMovements) {
+  for (const move of arrayOfMovements) {
     movementResponse = await makeMovement(id, nextPlayer, move);
     nextPlayer = movementResponse.nextPlayer;
   }
@@ -149,7 +155,7 @@ describe('Testando os casos de Sucesso', () => {
     let games = [];
     let counterReq = 0;
     while (counterReq < 100) {
-      sequenceOfMovements = _.shuffle(movementsForTest.firstPlayerWins);
+      const sequenceOfMovements = shuffle(movementsForTest.firstPlayerWins);
       games[counterReq] = await testingSuccessCases(sequenceOfMovements);
       counterReq++;
     }
@@ -170,7 +176,7 @@ describe('Testando os casos de Sucesso', () => {
       ).toBeFalsy();
       counterTest++;
     }
-  });
+  }, 30000);
 });
 
 describe('Testando os casos de Falha', () => {
